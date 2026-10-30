@@ -48,7 +48,7 @@ Ensure that Terraform is aware of the Juju model dependency of the charm module.
 
 ```hcl
 module "lustre-server" {
-  source     = "git::https://github.com/canonical/filesystem-charms//charms/lustre-server/terraform"
+  git::https://github.com/canonical/lustre-server-operator//terraform
   model_uuid = juju_model.my_model.uuid
 }
 ```

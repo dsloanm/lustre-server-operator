@@ -1,0 +1,57 @@
+# Copyright 2024-2026 Canonical Ltd.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+name: Release to latest/edge
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  ci-tests:
+    uses: ./.github/workflows/ci.yaml
+    secrets: inherit
+
+  release-to-charmhub:
+    name: Release to Charmhub
+    needs:
+      - ci-tests
+    runs-on: ubuntu-26.04
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+      - name: Select Charmhub channel
+        uses: canonical/charming-actions/channel@2.7.0
+        id: channel
+      - name: Install Charmcraft
+        run: sudo snap install charmcraft --classic --channel latest/stable
+      - name: Setup LXD
+        uses: canonical/setup-lxd@v1
+        with:
+          channel: 5.21/stable
+      # No `release-libraries` step: the vendored `filesystem_info` library is owned
+      # and published by `filesystem-client` in canonical/filesystem-charms.
+      - name: Publish charm to Charmhub
+        uses: canonical/charming-actions/upload-charm@2.7.0
+        with:
+          credentials: "${{ secrets.CHARMCRAFT_AUTH }}"
+          github-token: "${{ secrets.GITHUB_TOKEN }}"
+          channel: "${{ steps.channel.outputs.name }}"
+          charm-path: "."
+          tag-prefix: "lustre-server"
+          destructive-mode: false

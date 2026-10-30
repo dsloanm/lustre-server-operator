@@ -5,9 +5,100 @@
 name = "lustre-server"
 version = "0.0.1"
 requires-python = "==3.14.*"
-dependencies = ["ops", "pydantic", "charmlibs-apt", "charmlibs-systemd", "charmed-hpc-libs[ops]", "lustre-ops", "tenacity"]
-
-[tool.repository]
-libraries = [
-    "filesystem-client.filesystem_info"
+dependencies = [
+    "ops ~= 3.8.1",
+    "pydantic>=2",
+    "charmlibs-apt ~= 1.0",
+    "charmlibs-systemd ~= 1.0",
+    "charmed-hpc-libs[ops] ~= 0.1",
+    "lustre-ops",
+    "tenacity >= 8.2,< 10.0",
 ]
+
+[project.optional-dependencies]
+dev = [
+  # Linting
+  "ruff",
+  "codespell",
+  "pyright",
+
+  # Unit
+  "coverage[toml]",
+  "ops[testing]",
+
+  # Integration
+  "jubilant",
+  "pytest ~= 9.0",
+  "pytest-bdd ~= 8.0",
+  "pytest-jubilant-bdd ~= 0.14",
+  "pytest-order ~= 1.1",
+  "pytest-mock ~= 3.15",
+
+  # TiCS scan dependencies
+  "flake8",
+  "pylint",
+  "pyyaml",
+]
+
+[tool.uv.sources]
+lustre-ops = { path = "lustre-ops", editable = true }
+
+# Testing tools configuration
+[tool.coverage.run]
+branch = true
+source = ["src", "lustre-ops/src"]
+
+[tool.coverage.report]
+show_missing = true
+
+[tool.pytest.ini_options]
+minversion = "6.0"
+log_cli_level = "INFO"
+pythonpath = ["src", "lib"]
+markers = [
+  # Gherkin tags emitted by gherkinator (type/status/risk)
+  "functional: Functional test plan",
+  "solution: End-to-end solution test plan",
+  "performance: Performance test plan",
+  "reliability: Reliability test plan",
+  "security: Security test plan",
+  "planned: Test plan not yet implemented",
+  "implemented: Implemented test plan",
+  "deprecated: Deprecated test plan",
+  "edge: Edge risk level",
+  "beta: Beta risk level",
+  "candidate: Candidate risk level",
+  "stable: Stable risk level",
+]
+
+# Linting tools configuration
+[tool.ruff]
+line-length = 99
+# Keep charm modules in `src/` classified as third-party for isort, matching the
+# import ordering established in canonical/filesystem-charms.
+src = ["."]
+lint.select = ["E", "W", "F", "C", "N", "D", "I001"]
+lint.extend-ignore = [
+    "D203",
+    "D204",
+    "D213",
+    "D215",
+    "D400",
+    "D404",
+    "D406",
+    "D407",
+    "D408",
+    "D409",
+    "D413",
+]
+lint.ignore = ["E501", "D107"]
+extend-exclude = ["__pycache__", "*.egg_info", "lib"]
+lint.per-file-ignores = {"tests/*" = ["D100","D101","D102","D103","D104"], "lustre-ops/tests/*" = ["D100","D101","D102","D103","D104"]}
+lint.mccabe.max-complexity = 10
+
+[tool.codespell]
+skip = "build,lib,venv,icon.svg,.tox,.git,.mypy_cache,.ruff_cache,.coverage,uv.lock"
+
+[tool.pyright]
+include = ["src", "lustre-ops/src"]
+extraPaths = ["src", "lib"]

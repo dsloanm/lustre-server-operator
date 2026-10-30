@@ -1,0 +1,138 @@
+# Copyright 2024-2026 Canonical Ltd.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+name: lustre-server tests
+on:
+  workflow_call:
+  workflow_dispatch:
+  pull_request:
+    branches:
+      - main
+  schedule:
+    - cron: "0 5 * * *" # 05:00 UTC nightly
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  inclusive-naming-check:
+    name: Inclusive naming check
+    runs-on: ubuntu-26.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+      - name: Run tests
+        uses: get-woke/woke-action@v0
+        with:
+          fail-on-error: true
+
+  lint:
+    name: Lint
+    runs-on: ubuntu-26.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+      - name: Install `just`
+        run: sudo snap install just --classic
+      - name: Install `uv`
+        run: sudo snap install astral-uv --classic
+      - name: Run linters
+        run: just lint
+
+  commitlint:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    if: github.event_name == 'pull_request'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: Setup node
+        uses: actions/setup-node@v7
+        with:
+          node-version: lts/*
+      - name: Install commitlint
+        run: npm install -D @commitlint/cli @commitlint/config-conventional
+      - name: Validate PR commits with commitlint
+        run: |
+          npx commitlint \
+            --from ${{ github.event.pull_request.base.sha }} \
+            --to ${{ github.event.pull_request.head.sha }} \
+            --verbose
+
+  unit-test:
+    name: Unit tests
+    runs-on: ubuntu-26.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+      - name: Install `just`
+        run: sudo snap install just --classic
+      - name: Install `uv`
+        run: sudo snap install astral-uv --classic
+      - name: Run unit tests
+        run: just unit
+
+  typecheck:
+    name: Static type checking
+    runs-on: ubuntu-26.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+      - name: Install `just`
+        run: sudo snap install just --classic
+      - name: Install `uv`
+        run: sudo snap install astral-uv --classic
+      - name: Run tests
+        run: just typecheck
+
+  integration-test:
+    name: Integration tests (LXD)
+    runs-on: ubuntu-26.04
+    needs:
+      - inclusive-naming-check
+      - lint
+      - unit-test
+      - typecheck
+      - commitlint
+    # `commitlint` only runs on pull requests. Without this condition, a skipped
+    # `commitlint` would skip this job too, and callers (e.g. publish) would see
+    # the workflow succeed without integration tests having run.
+    if: ${{ !cancelled() && !failure() }}
+    steps:
+      - name: Remove unnecessary files
+        run: |
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /opt/ghc
+          sudo rm -rf /usr/local/share/boost
+          sudo rm -rf "$AGENT_TOOLSDIRECTORY"
+      - name: Checkout
+        uses: actions/checkout@v7
+      - name: Install `just`
+        run: sudo snap install just --classic
+      - name: Install `uv`
+        run: sudo snap install astral-uv --classic
+      - name: Setup operator environment
+        uses: charmed-kubernetes/actions-operator@main
+        with:
+          provider: lxd
+          lxd-channel: 5.21/stable
+          juju-channel: 3.6/edge
+      - name: Install Charmcraft
+        run: sudo snap install charmcraft --classic --channel latest/stable
+      - name: Run tests
+        run: just integration

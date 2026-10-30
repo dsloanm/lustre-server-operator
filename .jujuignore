@@ -1,1 +1,3 @@
 tests/
+lustre-ops/tests/
+terraform/

@@ -5,7 +5,7 @@ status: planned
 risk: edge
 description: >
   Validate the lustre-server charm deployment and operations.
-issues: "https://github.com/canonical/filesystem-charms/issues"
+https://github.com/canonical/lustre-server-operator/issues
 docs: "https://ubuntu.com/hpc/docs/latest"
 scenarios:
   - |-
