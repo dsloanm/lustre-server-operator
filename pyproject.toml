@@ -12,7 +12,7 @@ dependencies = [
     "charmlibs-systemd ~= 1.0",
     "charmed-hpc-libs[ops] ~= 0.1",
     "lustre-ops",
-    "tenacity >= 8.2,< 10.0",
+    "tenacity >= 9.2.1,< 10.0",
 ]
 
 [project.optional-dependencies]
