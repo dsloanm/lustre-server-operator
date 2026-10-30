@@ -6,7 +6,7 @@ name = "lustre-server"
 version = "0.0.1"
 requires-python = "==3.14.*"
 dependencies = [
-    "ops ~= 3.8.1",
+    "ops ~= 3.9.0",
     "pydantic>=2",
     "charmlibs-apt ~= 1.0",
     "charmlibs-systemd ~= 1.0",
